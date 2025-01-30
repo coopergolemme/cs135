@@ -47,11 +47,15 @@ def calc_k_nearest_neighbors(data_NF, query_QF, K=1):
 
     neighb_QKF = np.zeros((Q, K, F)) # placeholder to reserve the right shape
 
-    # HINT: review reductions, indexing, and argsort in day01 lab notebook.
 
-    # TODO: Solve k-nn problem from Q queries to N data vectors.
-    #       You might want a for loop over q from 0, 1, 2, ... Q-1.
-    #       At each q value, compute distances to all N neighbors
-    #                        then find the K closest neighbors
-    #                        then fill neighb_QKF with neighbors' features
-    return None
+    for q in range(Q):
+        # Compute distances between query_QF[q] and point in data_NF
+        query_distances_N = np.linalg.norm(data_NF - query_QF[q], axis=1)
+
+        # K nearest indicies of the data in the data_NF
+        k_nearest_indices_K = np.argsort(query_distances_N)[:K]
+
+        # Add data to neighb_QKF from data_NF given the computed k_nearest_indicies
+        neighb_QKF[q] = data_NF[k_nearest_indices_K]
+    
+    return neighb_QKF
