@@ -31,6 +31,23 @@ array([0, 1, 2, 3])
 >>> np.sort(np.hstack([tr_ids_per_fold_K[kk] for kk in range(K)]))
 array([0, 0, 1, 1, 2, 2, 3, 3])
 
+# Should be reproducible
+>>> tr_ids_per_fold_K2, te_ids_per_fold_K2 = (
+...     make_train_and_test_row_ids_for_n_fold_cv(N, K))
+>>> arrays_equal(te_ids_per_fold_K, te_ids_per_fold_K2)
+True
+>>> arrays_equal(tr_ids_per_fold_K, tr_ids_per_fold_K2)
+True
+
+# should be reproducible with different random_state
+>>> tr_ids_per_fold_K3, te_ids_per_fold_K3 = (
+...     make_train_and_test_row_ids_for_n_fold_cv(N, K, random_state=1))
+>>> tr_ids_per_fold_K4, te_ids_per_fold_K4 = (
+...     make_train_and_test_row_ids_for_n_fold_cv(N, K, random_state=1))
+>>> arrays_equal(te_ids_per_fold_K4, te_ids_per_fold_K3)
+True
+>>> arrays_equal(tr_ids_per_fold_K4, tr_ids_per_fold_K)
+False
 
 Test Cases Part 2
 -----------------
@@ -69,7 +86,10 @@ Test Cases Part 2
 import numpy as np
 
 from performance_metrics import calc_root_mean_squared_error
-
+def arrays_equal(list1, list2):
+    if len(list1) != len(list2):
+        return False
+    return all(np.array_equal(a, b) for a, b in zip(list1, list2))
 
 def train_models_and_calc_scores_for_n_fold_cv(
         estimator, x_NF, y_N, n_folds=3, random_state=0):
@@ -103,11 +123,27 @@ def train_models_and_calc_scores_for_n_fold_cv(
     train_error_per_fold = np.zeros(n_folds, dtype=np.float32)
     test_error_per_fold = np.zeros(n_folds, dtype=np.float32)
 
-    # TODO define the folds here by calling your function
-    # e.g. ... = make_train_and_test_row_ids_for_n_fold_cv(...)
+    N, F = np.shape(x_NF)
 
-    # TODO loop over folds and compute the train and test error
-    # for the provided estimator
+    train_ids_per_fold, test_ids_per_fold = make_train_and_test_row_ids_for_n_fold_cv(N, n_folds, random_state=random_state)
+
+    for i in range(n_folds):
+        train_ids = train_ids_per_fold[i]
+        test_ids = test_ids_per_fold[i]
+
+        tr_x = x_NF[train_ids]
+
+        estimator.fit(tr_x, y_N[train_ids])
+
+        te_x = x_NF[test_ids]
+        te_y = y_N[test_ids]
+
+        tr_y_pred = estimator.predict(tr_x)
+        te_y_pred = estimator.predict(te_x)
+
+        train_error_per_fold[i] = calc_root_mean_squared_error(y_N[train_ids], tr_y_pred)
+        test_error_per_fold[i] = calc_root_mean_squared_error(te_y, te_y_pred)
+
 
     return train_error_per_fold, test_error_per_fold
 
@@ -157,9 +193,25 @@ def make_train_and_test_row_ids_for_n_fold_cv(
     train_ids_per_fold = list()
     test_ids_per_fold = list()
 
-    # TODO obtain a shuffled order of the n_examples
-    # TODO loop over folds, establish which indices belong each fold
-    # TODO assign those indices to the fold's test set
-    # TODO assign remaining indices to the fold's train set
+    # Obtain a shuffled order of the n_examples
+    indices = np.arange(n_examples)
+    random_state.shuffle(indices)
+    
+    # Loop over folds, establish which indices belong each fold
+    fold_sizes = np.full(n_folds, n_examples // n_folds, dtype=int)
+    fold_sizes[:n_examples % n_folds] += 1
+
+    
+    current = 0
+    for fold_size in fold_sizes:
+        start, stop = current, current + fold_size
+        test_indices = indices[start:stop]
+
+        train_indices = np.concatenate([indices[:start], indices[stop:]])
+        # Add to ids
+        test_ids_per_fold.append(test_indices)
+        train_ids_per_fold.append(train_indices)
+        current = stop
+
 
     return train_ids_per_fold, test_ids_per_fold

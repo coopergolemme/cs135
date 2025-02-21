@@ -38,7 +38,6 @@ class LeastSquaresLinearRegressor(object):
     * self.b : float
         scalar real-valued bias or "intercept"
     '''
-
     def __init__(self):
         ''' Constructor of an sklearn-like regressor
 
@@ -79,9 +78,15 @@ class LeastSquaresLinearRegressor(object):
         '''
         N, F = x_NF.shape
 
-        # Hint: Use np.linalg.solve
-        # Using np.linalg.inv may cause issues (see day03 lab)
-        pass  # TODO fixme
+        x_with_bias_NF = np.hstack([np.ones((N, 1)), x_NF])
+
+        LHS = x_with_bias_NF.T @ x_with_bias_NF
+        RHS = np.dot(x_with_bias_NF.T, y_N)
+
+        sol = np.linalg.solve(LHS, RHS)
+        
+        self.b = sol[0]
+        self.w_F = sol[1:]
 
     def predict(self, x_MF):
         ''' Make predictions given input features for M examples
@@ -97,8 +102,8 @@ class LeastSquaresLinearRegressor(object):
         yhat_M : 1D array, size M
             Each value is the predicted scalar for one example
         '''
-        # TODO FIX ME
-        return np.asarray([0.0])
+
+        return self.b + x_MF @ self.w_F
 
 
 def test_on_toy_data(N=100):

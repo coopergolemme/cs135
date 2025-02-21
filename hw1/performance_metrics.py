@@ -14,6 +14,7 @@ Test Cases
 '''
 
 import numpy as np
+import math
 
 
 def calc_root_mean_squared_error(y_N, yhat_N):
@@ -37,4 +38,9 @@ def calc_root_mean_squared_error(y_N, yhat_N):
     yhat_N = np.atleast_1d(yhat_N)
     assert y_N.ndim == 1
     assert y_N.shape == yhat_N.shape
-    return 0.0  # TODO fixme
+
+    total = 0
+    for i in range(len(y_N)):
+        total += (y_N[i] - yhat_N[i]) ** 2
+    
+    return math.sqrt(total / len(y_N))
